@@ -1,67 +1,45 @@
-// deploy/001_deploy_private_list_check.ts
-import { DeployFunction } from "hardhat-deploy/types";
+// deploy/deploy.ts — простой деплой только CipherGuess
 import { HardhatRuntimeEnvironment } from "hardhat/types";
+import { DeployFunction } from "hardhat-deploy/types";
 
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-  const { deployments, getNamedAccounts, network, ethers, run } = hre;
-  const { deploy, log, read } = deployments;
-
+const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
+  const { deployments, getNamedAccounts, network, ethers } = hre;
+  const { deploy, log } = deployments;
   const { deployer } = await getNamedAccounts();
-  const chainId = await hre.getChainId();
 
-  log("----------------------------------------------------");
-  log(`Network: ${network.name} (chainId=${chainId})`);
-  log(`Deployer: ${deployer}`);
+  // N берём из ENV или 100 по умолчанию
+  const maxStr = process.env.GUESS_MAX_VALUE ?? "100";
+  const N = Number(maxStr);
+  if (!Number.isInteger(N) || N < 0 || N > 65535) {
+    throw new Error(`Invalid GUESS_MAX_VALUE="${maxStr}". Must be integer in [0..65535].`);
+  }
 
-  // Немного полезной диагностики (не требует .env)
-  const bal = await ethers.provider.getBalance(deployer);
-  const fee = await ethers.provider.getFeeData();
-  log(`Deployer balance: ${ethers.formatEther(bal)} ETH`);
-  log(
-    `FeeData: gasPrice=${fee.gasPrice?.toString() ?? "—"} | maxFeePerGas=${fee.maxFeePerGas?.toString() ?? "—"} | maxPriorityFeePerGas=${fee.maxPriorityFeePerGas?.toString() ?? "—"}`
-  );
+  const wait = Number(process.env.WAIT_CONFIRMS ?? "1");
 
-  // Деплой без аргументов; явно указываем имя контракта
-  const res = await deploy("PrivateListCheck", {
-    contract: "PrivateListCheck",
+  log(`Deployer=${deployer} | Network=${network.name} | N=${N}`);
+
+  // деплой контракта
+  const res = await deploy("CipherGuess", {
     from: deployer,
-    args: [],
+    args: [N], // constructor(uint16 _N)
     log: true,
-    // waitConfirmations: 1, // при желании можно увеличить на L2/медленных RPC
-    // deterministicDeployment: false,
+    waitConfirmations: wait,
+    skipIfAlreadyDeployed: false,
   });
 
-  log(`✅ PrivateListCheck deployed at: ${res.address}`);
-  if (res.transactionHash) log(`   tx: ${res.transactionHash}`);
+  log(`CipherGuess deployed at ${res.address} (N=${N}) on ${network.name}`);
 
-  // Пробуем прочитать version() для валидации
+  // опционально: вывести версию, если функция есть
   try {
-    const version: string = await read("PrivateListCheck", "version");
-    log(`ℹ️ version(): ${version}`);
-  } catch (e) {
-    log(`(warn) version() read failed: ${(e as Error).message}`);
+    const ctr = await ethers.getContractAt("CipherGuess", res.address);
+    const ver = await ctr.version();
+    log(`CipherGuess version: ${ver}`);
+  } catch {
+    // если в контракте нет version() — просто молчим
   }
 
-  // Опциональная верификация на Etherscan (если настроен ключ, но .env править не нужно)
-  // Попытаемся аккуратно, без падения, только когда есть API-ключ в окружении.
-  if (network.name !== "hardhat" && process.env.ETHERSCAN_API_KEY) {
-    try {
-      log("🔎 Verifying on Etherscan…");
-      await run("verify:verify", {
-        address: res.address,
-        constructorArguments: [],
-      });
-      log("✅ Etherscan verification done");
-    } catch (e) {
-      log(`(warn) verify skipped/failed: ${(e as Error).message}`);
-    }
-  } else {
-    log("🔎 Verify skipped (no ETHERSCAN_API_KEY or local network).");
-  }
-
-  log("----------------------------------------------------");
+  log(`ℹ️ После деплоя установи секрет через UI (Owner tools → Reseed).`);
 };
 
 export default func;
-func.id = "deploy_PrivateListCheck";
-func.tags = ["PrivateListCheck"];
+func.tags = ["CipherGuess"];

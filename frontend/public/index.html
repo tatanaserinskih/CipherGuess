@@ -1,259 +1,452 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin" />
-    <meta http-equiv="Cross-Origin-Embedder-Policy" content="require-corp" />
-    <title>Private List Check · ZAMA FHEVM (v2)</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;800&display=swap" rel="stylesheet">
-    <style>
-      :root{
-        --bg: #faf7f2;           /* light sand */
-        --ink:#10121a;           /* near-black text */
-        --muted:#6b7280;         /* slate */
-        --card:#ffffff;          /* white cards */
-        --stroke:#e7e2da;        /* warm border */
-        --shadow: 0 10px 30px rgba(17,18,26,.08);
-        --radius:16px;
-        --brand:#7c3aed;         /* violet */
-        --accent:#f59e0b;        /* amber */
-        --ok:#10b981;            /* green */
-        --bad:#ef4444;           /* red */
-      }
-      *{box-sizing:border-box}
-      html,body{height:100%}
-      body{
-        font-family:'DM Sans', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-        color:var(--ink);
-        background:
-          radial-gradient(900px 500px at 0% 0%, #eae2ff40, transparent 60%),
-          radial-gradient(800px 600px at 100% 0%, #ffecc240, transparent 60%),
-          var(--bg);
-        margin:0;
-      }
-      .container{max-width:1200px;margin:0 auto;padding:28px 16px 56px}
-      header{
-        display:grid;grid-template-columns:1fr auto;align-items:center;gap:20px;margin-bottom:22px;
-      }
-      .brand{display:flex;align-items:center;gap:14px}
-      .logo{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--brand),#a78bfa);box-shadow:var(--shadow)}
-      h1{font-size:clamp(22px,3.2vw,30px);margin:0;font-weight:800}
-      .sub{font-size:13px;color:var(--muted)}
-      .top-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-      .pill{font-size:12px;color:var(--muted);border:1px solid var(--stroke);padding:8px 10px;border-radius:999px;background:#fff7}
-      .btn{appearance:none;border:1px solid var(--stroke);background:linear-gradient(180deg,#fff,#f8f7f5);padding:12px 16px;border-radius:12px;cursor:pointer;font-weight:800;letter-spacing:.2px;box-shadow:var(--shadow);}
-      .btn:disabled{opacity:.5;cursor:not-allowed}
-      .btn.primary{background:linear-gradient(135deg,#a78bfa,#7c3aed);color:white;border:0}
-      .btn.accent{background:linear-gradient(135deg,#ffd166,#f59e0b);color:#251a00;border:0}
-      .btn.ok{background:linear-gradient(135deg,#34d399,#10b981);color:white;border:0}
-      .btn.bad{background:linear-gradient(135deg,#f87171,#ef4444);color:white;border:0}
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CipherGuess — Private Guessing (Zama FHEVM)</title>
+  <link rel="preconnect" href="https://cdn.zama.ai"/>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net"/>
+  <style>
+    :root{
+      --bg:#0c0f14;--card:#141923;--muted:#8ea3b0;--text:#e9f0f4;--accent:#60a5fa;--accent2:#22d3ee;--ok:#10b981;
+      --btn:#1f2937;--btn2:#243242;--br:14px;--bd:1px solid #253043;--shadow:0 8px 30px rgba(0,0,0,.28);
+    }
+    *{box-sizing:border-box} body{margin:0;font:16px/1.45 Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+    .wrap{max-width:980px;margin:26px auto;padding:0 14px}
+    header.hero{display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+    .logo{margin:0;font-weight:800;letter-spacing:.2px}
+    .logo span{color:var(--accent2)}
+    .badge{background:#1b2331;border:var(--bd);color:#cfe4f5;border-radius:999px;padding:6px 10px;font-size:12px}
+    .btn{background:var(--btn);border:var(--bd);color:#d8e7f3;padding:10px 14px;border-radius:999px;cursor:pointer}
+    .btn[disabled]{opacity:.6;cursor:not-allowed}
+    .btn.primary{background:#2b3a52}
+    .btn.accent{background:#1f2d46;color:#e8f2ff;border-color:#35507c}
+    .panel{margin:12px 0}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .card{background:var(--card);border:var(--bd);border-radius:var(--br);padding:16px;box-shadow:var(--shadow)}
+    h2{margin:0 0 10px 0;font-size:16px;color:#d6e8f7}
+    input[type="number"], input[type="text"]{
+      width:180px;background:#0e1521;border:var(--bd);border-radius:10px;padding:10px 12px;color:#dbeaf6;outline:none
+    }
+    .status{margin-top:8px;color:var(--muted);font-size:13px}
+    .resultBox{min-height:48px;display:flex;align-items:center;border:1px dashed #2b3955;border-radius:12px;padding:12px}
+    .muted{color:var(--muted)}
+    .foot{margin:20px 0;color:#86a0b0;text-align:center;font-size:12px}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .kv{display:flex;gap:10px;align-items:center}
+    strong{font-weight:700}
+    .chip{display:inline-block;background:#1a2431;border:1px solid #2a3a55;border-radius:999px;padding:6px 10px;font-size:12px;color:#bcd1e2}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+  <main class="wrap">
+    <header class="hero">
+      <h1 class="logo">Cipher<span>Guess</span></h1>
+      <span id="netBadge" class="badge">Network: —</span>
+      <span id="ctrBadge" class="badge">Contract: —</span>
+      <button id="connectBtn" class="btn primary" style="margin-left:auto">Connect Wallet</button>
+    </header>
 
-      /* GRID: radically new layout */
-      .grid{display:grid;grid-template-columns: 1.2fr .8fr; gap:18px}
-      .row{display:grid;grid-template-columns:1fr 1fr; gap:18px}
-      @media (max-width: 980px){ .grid{grid-template-columns:1fr} .row{grid-template-columns:1fr} }
+    <section class="panel grid">
+      <div class="card">
+        <h2>Range</h2>
+        <div class="kv"><span>Secret is in</span> <strong id="rangeOut">0 … —</strong></div>
+      </div>
 
-      .card{background:var(--card); border:1px solid var(--stroke); border-radius:var(--radius); padding:18px 18px 16px; box-shadow:var(--shadow)}
-      .card h2{font-size:16px;margin:0 0 12px 0;font-weight:800;display:flex;align-items:center;gap:10px}
-      .kbd{border:1px solid var(--stroke);background:#fbfaf9;padding:2px 6px;border-radius:6px;font-size:12px;color:var(--muted)}
-
-      .field{margin-bottom:12px}
-      .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
-      .input, select{width:100%;padding:12px 12px;border:1px solid var(--stroke);border-radius:12px;outline:none;background:white;font-size:15px}
-      .input:focus, select:focus{border-color:#c4b5fd; box-shadow:0 0 0 3px #c4b5fd40}
-      .row-actions{display:flex;gap:10px;flex-wrap:wrap}
-
-      .status{margin-top:10px;padding:12px;border-radius:12px;border:1px dashed var(--stroke);background:#fff7;color:var(--muted);font-weight:700}
-      .result{display:none;margin-top:10px;padding:14px;border-radius:12px;border:1px solid var(--stroke);text-align:center;font-weight:900}
-      .result.ok{color:var(--ok);border-color:#34d39980;background:#ecfdf5}
-      .result.bad{color:var(--bad);border-color:#f8717180;background:#fef2f2}
-
-      footer{margin-top:22px;color:var(--muted);font-size:12px;text-align:center}
-      .loading{position:relative}
-      .loading::after{content:"";position:absolute;right:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;border-radius:50%;border:2px solid #00000022;border-top-color:#00000066;animation:spin 1s linear infinite}
-      @keyframes spin{to{transform:translateY(-50%) rotate(1turn)}}
-      code{background:#fbfaf9;border:1px solid var(--stroke);padding:2px 6px;border-radius:6px}
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <header>
-        <div class="brand">
-          <div class="logo"></div>
-          <div>
-            <h1>Private List Check</h1>
-            <div class="sub">ZAMA · FHEVM · Sepolia</div>
-          </div>
-        </div>
-        <div class="top-actions">
-          <span class="pill">Network: <b id="netInfo">—</b></span>
-          <span class="pill">Account: <b id="acctInfo">—</b></span>
-          <button id="btnConnect" class="btn primary">Connect MetaMask</button>
-        </div>
-      </header>
-
-      <!-- NEW LAYOUT: main left column is the Private Check, right column stacks Contract + Admin -->
-      <section class="grid">
-        <!-- LEFT: Private Check (wide) -->
-        <div class="card">
-          <h2>Private Check <span class="kbd">encrypted</span></h2>
-          <div class="row">
-            <div class="field">
-              <label>Address to check</label>
-              <input id="addr" class="input" placeholder="0x1234…" />
-            </div>
-            <div class="field">
-              <label>Mode</label>
-              <select id="mode">
-                <option value="whitelist">Whitelist</option>
-                <option value="blacklist">Blacklist</option>
-              </select>
-            </div>
-          </div>
-          <div class="row-actions" style="margin:6px 0 2px">
-            <button id="btnCheck" class="btn accent" disabled>Check</button>
-            <button id="btnLast" class="btn" disabled>Decrypt Last Result</button>
-          </div>
-          <div id="status" class="status">Waiting for connection…</div>
-          <div id="result" class="result">—</div>
-        </div>
-
-        <!-- RIGHT: Contract info + Admin stacked -->
+      <div class="card">
+        <h2>Your Guess</h2>
         <div class="row">
-          <div class="card">
-            <h2>Contract</h2>
-            <div class="field"><label>Address</label><div class="pill" style="display:inline-block;user-select:all">0x8Ac1d3E49A73F8328e43719dCF6fBfeF4405937B</div></div>
-            <div class="field"><label>Mode</label><div class="pill">KMS (Sepolia)</div></div>
-            <div class="field"><label>KMS</label><div class="pill" style="display:inline-block;user-select:all">0x1364cBBf2cDF5032C47d8226a6f6FBD2AFCDacAC</div></div>
-          </div>
-          <div class="card">
-            <h2>Admin (optional)</h2>
-            <div class="field">
-              <label>Address to add (UI encrypts it)</label>
-              <input id="adminHandle" class="input" placeholder="0xabc…" />
-            </div>
-            <div class="row-actions">
-              <button id="btnAddW" class="btn ok" disabled>Add to Whitelist</button>
-              <button id="btnAddB" class="btn bad" disabled>Add to Blacklist</button>
-            </div>
-            <div style="margin-top:8px;color:var(--muted);font-size:12px">Owner-only actions. The raw address never leaves the browser.</div>
-          </div>
+          <input id="guessInput" type="number" min="0" value="0" />
+          <button id="playBtn" class="btn accent">Play</button>
         </div>
-      </section>
+        <div id="status" class="status muted"></div>
+        <div id="txOut" class="status muted"></div>
+      </div>
+    </section>
 
-      <section class="card" style="margin-top:18px">
-        <h2>How it works</h2>
-        <ol style="margin:0;padding-left:18px;color:var(--muted);line-height:1.6">
-          <li>Address is encrypted locally via ZAMA Relayer SDK.</li>
-          <li>Contract iterates over encrypted set and compares using <code>FHE.eq</code>.</li>
-          <li>Only encrypted boolean is published; UI requests <code>publicDecrypt</code>.</li>
-        </ol>
-      </section>
+    <section class="panel">
+      <div class="card result">
+        <h2>Result</h2>
+        <div id="resultBox" class="resultBox muted">Make a guess to see if you win.</div>
+      </div>
+    </section>
 
-      <footer>
-        UI language: English · This page logs handles/proofs/tx hashes only (no raw addresses).
-      </footer>
-    </div>
+    <section class="panel">
+      <div class="card">
+        <h2>Owner tools</h2>
+        <div class="row">
+          <label class="row" style="gap:8px">
+            <span>Seed (≤ N):</span>
+            <input id="seedInput" type="number" min="0" placeholder="e.g. 5" />
+          </label>
+          <button id="reseedBtn" class="btn">Reseed (encrypted)</button>
+        </div>
+        <small class="muted">Only contract owner can reseed.</small>
+      </div>
+    </section>
 
-    <!-- Zama Relayer SDK (official) -->
-    <script type="module" crossorigin src="https://cdn.zama.ai/relayer-sdk-js/0.1.2/relayer-sdk-js.js"></script>
-    <!-- ethers v6 -->
-    <script type="module" crossorigin src="https://cdn.jsdelivr.net/npm/ethers@6.15.0/+esm"></script>
+    <footer class="foot">Built with Zama FHEVM • Demo only</footer>
+  </main>
 
-    <script type="module">
-      import { BrowserProvider, Contract, getAddress } from "https://cdn.jsdelivr.net/npm/ethers@6.15.0/+esm";
-      import { initSDK, createInstance, SepoliaConfig } from "https://cdn.zama.ai/relayer-sdk-js/0.1.2/relayer-sdk-js.js";
+  <script>
+    window.CONFIG = {
+      NETWORK_NAME: "Sepolia",
+      CHAIN_ID_HEX: "0xaa36a7",
+      CONTRACT_ADDRESS: "0xb7962E717F58b075F9D5229Bf0F8287b58804955"
+    };
+  </script>
 
-      // ===== Console helpers (simple) =====
-      const clog = {
-        banner(){ console.log('Private List Check ready'); },
-        group:t=>console.log(`--- ${t} ---`),
-        end:()=>{}, table:o=>console.log(o), kv:(k,v)=>console.log(`${k}:`, v)
-      }; clog.banner();
+  <script>
+    window.CG_ABI = [
+      { "type":"function","name":"N","stateMutability":"view","inputs":[],"outputs":[{"type":"uint16"}]},
+      { "type":"function","name":"play","stateMutability":"nonpayable","inputs":[{"type":"bytes32"},{"type":"bytes"}],"outputs":[{"type":"bytes32"}]},
+      { "type":"function","name":"reseed","stateMutability":"nonpayable","inputs":[{"type":"bytes32"},{"type":"bytes"}],"outputs":[]},
+      { "type":"event","name":"Played","inputs":[
+          {"name":"player","type":"address","indexed":true},
+          {"name":"resultHandle","type":"bytes32","indexed":false}
+        ],"anonymous":false}
+    ];
+  </script>
 
-      // ===== DOM =====
-      const $ = (id)=>document.getElementById(id);
-      const btnConnect = $("btnConnect");
-      const btnCheck   = $("btnCheck");
-      const btnLast    = $("btnLast");
-      const btnAddW    = $("btnAddW");
-      const btnAddB    = $("btnAddB");
-      const addrInput  = $("addr");
-      const adminHandle= $("adminHandle");
-      const statusEl   = $("status");
-      const resultEl   = $("result");
-      const netInfo    = $("netInfo");
-      const acctInfo   = $("acctInfo");
-      const modeSel    = $("mode");
+  <!-- RELAYER + дешифровка -->
+  <script>
+  (() => {
+    const SDK_URL = "https://cdn.zama.ai/relayer-sdk-js/0.2.0/relayer-sdk-js.js";
+    let _sdk = null, _relayer = null, _sepCfg = null;
 
-      // ===== Config =====
-      const CONTRACT_ADDRESS = getAddress("0x8Ac1d3E49A73F8328e43719dCF6fBfeF4405937B");
-      const RELAYER_URL = "https://relayer.testnet.zama.cloud";
-      const KMS_ADDRESS = getAddress("0x1364cBBf2cDF5032C47d8226a6f6FBD2AFCDacAC");
-      const CHAIN_HEX = "0xaa36a7"; // Sepolia
-      const CHAIN_ID  = 11155111n;
+    const hexToBytes = (hex) => {
+      if (!hex) return new Uint8Array();
+      let h = String(hex);
+      if (h.startsWith("0x") || h.startsWith("0X")) h = h.slice(2);
+      if (h.length % 2) h = "0" + h;
+      const out = new Uint8Array(h.length / 2);
+      for (let i = 0; i < out.length; i++) out[i] = parseInt(h.substr(i*2, 2), 16);
+      return out;
+    };
 
-      // ===== ABI =====
-      const abi = [
-        { inputs:[{name:"addrExt",type:"bytes32"},{name:"proof",type:"bytes"}], name:"checkWhitelistPublic", outputs:[{name:"",type:"bytes32"}], stateMutability:"nonpayable", type:"function" },
-        { inputs:[{name:"addrExt",type:"bytes32"},{name:"proof",type:"bytes"}], name:"checkBlacklistPublic", outputs:[{name:"",type:"bytes32"}], stateMutability:"nonpayable", type:"function" },
-        { inputs:[{name:"addrExt",type:"bytes32"},{name:"proof",type:"bytes"}], name:"addToWhitelist", outputs:[], stateMutability:"nonpayable", type:"function" },
-        { inputs:[{name:"addrExt",type:"bytes32"},{name:"proof",type:"bytes"}], name:"addToBlacklist", outputs:[], stateMutability:"nonpayable", type:"function" },
-        { inputs:[], name:"getLastResultHandle", outputs:[{name:"",type:"bytes32"}], stateMutability:"view", type:"function" },
-        { anonymous:false, inputs:[
-            {indexed:true,name:"user",type:"address"},
-            {indexed:false,name:"isWhitelist",type:"bool"},
-            {indexed:false,name:"scannedCount",type:"uint256"},
-            {indexed:false,name:"resultHandle",type:"bytes32"}
-          ], name:"MembershipChecked", type:"event" }
+    // Нормальное извлечение булевого из любого формата ответа SDK
+    function extractBool(resp, handleHex) {
+      console.log("[Decrypt] raw response", resp);
+      const h = String(handleHex);
+      const keys = [
+        h, h.toLowerCase(), h.toUpperCase()
       ];
-
-      // ===== State =====
-      let provider, signer, user, relayer, contract; let lastHandle = null;
-
-      // ===== UI helpers =====
-      const setStatus = (t)=> statusEl.textContent=t;
-      function showResult(ok){ resultEl.style.display='block'; resultEl.classList.remove('ok','bad'); resultEl.classList.add(ok?'ok':'bad'); resultEl.textContent = ok? '✅ IN LIST' : '❌ OUT OF LIST'; }
-      const setLoading = (el,on)=> el && el.classList.toggle('loading', !!on);
-      function refreshButtons(){
-        const okAddr  = /^0x[0-9a-fA-F]{40}$/.test((addrInput.value||'').trim());
-        const okAdmin = /^0x[0-9a-fA-F]{40}$/.test((adminHandle.value||'').trim());
-        if (btnCheck) btnCheck.disabled = !signer || !okAddr;
-        if (btnAddW) btnAddW.disabled = !signer || !okAdmin;
-        if (btnAddB) btnAddB.disabled = !signer || !okAdmin;
+      // 1) массивы значений
+      const arr = resp?.values ?? resp?.results ?? resp?.data ?? (Array.isArray(resp) ? resp : null);
+      if (Array.isArray(arr) && arr.length) return normalizeBool(arr[0]);
+      // 2) одиночное поле value
+      if (typeof resp?.value !== "undefined") return normalizeBool(resp.value);
+      // 3) объект-мапа { handleHex: bool }
+      if (resp && typeof resp === "object") {
+        for (const k of keys) {
+          if (Object.prototype.hasOwnProperty.call(resp, k)) return normalizeBool(resp[k]);
+        }
+        // если ключей нет/не совпали — взять первое значение объекта
+        const firstKey = Object.keys(resp)[0];
+        if (typeof firstKey !== "undefined") return normalizeBool(resp[firstKey]);
       }
-      function validateAddress(raw){ const s=(raw||'').trim(); if(!s) throw new Error('Enter an address'); if(!/^0x[0-9a-fA-F]{40}$/.test(s)) throw new Error('Invalid address format (0x + 40 hex)'); return getAddress(s); }
-      addrInput.addEventListener('input', refreshButtons); adminHandle.addEventListener('input', refreshButtons);
+      // 4) дефолт — приводим как примитив
+      return normalizeBool(resp);
+    }
 
-      // ===== Network guards =====
-      async function ensureSepolia(){ const id = await window.ethereum.request({ method:'eth_chainId' }); if (BigInt(id)!==CHAIN_ID){ await window.ethereum.request({ method:'wallet_switchEthereumChain', params:[{chainId: CHAIN_HEX}] }); } }
+    function normalizeBool(val){
+      if (typeof val === "boolean") return val;
+      if (typeof val === "number") return val !== 0;
+      if (typeof val === "string") return val === "true" || val === "1";
+      return !!val;
+    }
 
-      // ===== Relayer helpers =====
-      function addAddressToBuf(buf, address){ if (typeof buf.addAddress==='function'){ buf.addAddress(address); return 'addAddress'; } if (typeof buf.add160==='function'){ buf.add160(BigInt(address)); return 'add160'; } throw new Error('Relayer SDK missing addAddress/add160'); }
-      const toHex = (u8)=> '0x'+Array.from(u8).map(b=>b.toString(16).padStart(2,'0')).join('');
-      async function encryptAddress(address){ clog.group('ENCRYPTION'); const buf = relayer.createEncryptedInput(CONTRACT_ADDRESS, user); const used = addAddressToBuf(buf, address); clog.kv('inputMethod', used); const { handles, inputProof } = await buf.encrypt(); const handle = toHex(handles[0]); const proof = toHex(inputProof); clog.table({ handle, proofBytes: inputProof.length, proofPreview: proof.slice(0,66)+'…' }); clog.end(); return { handle, proof }; }
+    async function _loadSDK(){
+      if (_sdk) return _sdk;
+      _sdk = await import(SDK_URL);
+      _sepCfg = _sdk?.SepoliaConfig || null;
+      console.log("[RelayerSDK] loaded", _sdk);
+      return _sdk;
+    }
+    async function initRelayer(){
+      if (_relayer) return _relayer;
+      const { initSDK, createInstance, SepoliaConfig } = await _loadSDK();
+      await initSDK();
+      const cfg = {
+        ...(SepoliaConfig || {}),
+        network: window.ethereum,
+        relayerUrl: "https://relayer.testnet.zama.cloud",
+        gatewayUrl: "https://gateway.sepolia.zama.ai/",
+        debug: true,
+      };
+      console.log("[RelayerSDK] createInstance cfg", cfg);
+      _relayer = await createInstance(cfg);
+      console.log("[RelayerSDK] instance ready", _relayer);
+      return _relayer;
+    }
 
-      async function callCheckPublic(mode, handle, proof){ const fn = mode==='blacklist' ? 'checkBlacklistPublic' : 'checkWhitelistPublic'; clog.group('CALL (public)'); clog.table({ fn, handle, proofLen: proof.length }); const tx = await contract[fn](handle, proof, { gasLimit: 3_000_000 }); clog.kv('txHash', tx.hash); const receipt = await tx.wait(); clog.table({ blockNumber: receipt.blockNumber, gasUsed: receipt.gasUsed.toString(), status: receipt.status }); let evtHandle=null; for (const lg of receipt.logs){ try{ const parsed=contract.interface.parseLog(lg); if(parsed && parsed.name==='MembershipChecked'){ evtHandle = parsed.args.resultHandle; clog.kv('event.handle', evtHandle); break; } }catch{} } if(!evtHandle){ try{ evtHandle = await contract.getLastResultHandle(); clog.kv('getLastResultHandle()', evtHandle); }catch{} } clog.end(); if(!evtHandle) throw new Error('No public handle returned by contract'); lastHandle = evtHandle; return evtHandle; }
+    function _attachExtra(enc, ca, ua){
+      const extra = {
+        contractAddress: ca,
+        userAddress: ua,
+        chainId: (_sepCfg?.chainId) || "0xaa36a7",
+        kmsContractAddress: _sepCfg?.kmsContractAddress,
+        aclContractAddress: _sepCfg?.aclContractAddress,
+      };
+      if (typeof enc.setExtraData === "function") enc.setExtraData(extra);
+      else enc.extraData = extra;
+    }
 
-      async function decryptPublic(handle){ clog.group('DECRYPT (public)'); const out = await relayer.publicDecrypt([handle]); const value = Array.isArray(out) ? out[0] : out[handle]; clog.table({ handle, decrypted: String(value) }); clog.end(); return (typeof value==='bigint') ? (value===1n) : (Number(value)===1); }
+    async function encrypt16For(contractAddress, userAddress, valueBigInt){
+      const r = await initRelayer();
+      let lastErr;
+      try{
+        const encO = r.createEncryptedInput({ contractAddress, userAddress });
+        _attachExtra(encO, contractAddress, userAddress);
+        encO.add16(BigInt(valueBigInt));
+        console.log("[Encrypt] encO before encrypt", encO);
+        const out = await encO.encrypt();
+        console.log("[Encrypt] encO result", out);
+        const handle = (out?.handles || out?.externalValues)?.[0];
+        const proof  =  out?.inputProof || out?.attestation;
+        if (!handle || !proof) throw new Error("Encrypt: missing handle/proof");
+        return { handle, attestation: proof };
+      }catch(e1){ console.warn("[Encrypt] pathA failed", e1); lastErr = e1; }
+      try{
+        const encP = r.createEncryptedInput(contractAddress, userAddress);
+        _attachExtra(encP, contractAddress, userAddress);
+        encP.add16(BigInt(valueBigInt));
+        console.log("[Encrypt] encP before encrypt", encP);
+        const out = await encP.encrypt();
+        console.log("[Encrypt] encP result", out);
+        const handle = (out?.handles || out?.externalValues)?.[0];
+        const proof  =  out?.inputProof || out?.attestation;
+        if (!handle || !proof) throw new Error("Encrypt: missing handle/proof");
+        return { handle, attestation: proof };
+      }catch(e2){ console.warn("[Encrypt] pathB failed", e2); lastErr = e2; }
+      throw new Error("encrypt16For failed: " + (lastErr?.message || String(lastErr)));
+    }
 
-      // ===== Connect =====
-      btnConnect.addEventListener('click', async ()=>{ try{ setLoading(btnConnect,true); if(!window.ethereum) throw new Error('MetaMask not found'); await ensureSepolia(); provider = new BrowserProvider(window.ethereum); await provider.send('eth_requestAccounts', []); signer = await provider.getSigner(); user = await signer.getAddress(); const net = await provider.getNetwork(); netInfo.textContent = `Sepolia (${net.chainId.toString()})`; acctInfo.textContent = `${user.slice(0,6)}…${user.slice(-4)}`; const code = await provider.getCode(KMS_ADDRESS); if(code==='0x') throw new Error('KMS contract not found'); await initSDK(); relayer = await createInstance({ ...SepoliaConfig, network: window.ethereum, relayerUrl: RELAYER_URL, debug:true }); contract = new Contract(CONTRACT_ADDRESS, abi, signer); setStatus('Connected. Ready to check.'); btnLast.disabled = false; refreshButtons(); clog.group('SETUP'); console.log('Ready'); clog.end(); }catch(e){ console.error(e); setStatus('❌ '+e.message); } finally{ setLoading(btnConnect,false); } });
+    async function tryUserDecrypt(handleHex, contractAddress, userAddress){
+      const r = await initRelayer();
+      const bytes = hexToBytes(handleHex);
+      const variants = [
+        () => r.userDecrypt({ handles: [bytes], contractAddress, userAddress, types: ["bool"] }),
+        () => r.userDecrypt({ handles: [handleHex], contractAddress, userAddress, types: ["bool"] }),
+        () => r.userDecrypt({ handle:  bytes,   contractAddress, userAddress, types: ["bool"] }),
+        () => r.userDecrypt({ handle:  handleHex, contractAddress, userAddress, types: ["bool"] }),
+        () => r.userDecrypt([bytes], contractAddress, userAddress),
+        () => r.userDecrypt([handleHex], contractAddress, userAddress),
+        () => r.userDecrypt(bytes,   contractAddress, userAddress),
+        () => r.userDecrypt(handleHex,contractAddress, userAddress),
+      ];
+      let lastErr;
+      for (const [i,call] of variants.entries()){
+        try{
+          console.log(`[Decrypt:user] try v${i+1}`);
+          const resp = await call();
+          const bool = extractBool(resp, handleHex);
+          console.log(`[Decrypt:user] v${i+1} parsed`, bool);
+          return bool;
+        }catch(e){ console.warn(`[Decrypt:user] v${i+1} failed`, e); lastErr = e; }
+      }
+      throw lastErr || new Error("userDecrypt: all variants failed");
+    }
 
-      // ===== Actions =====
-      btnCheck.addEventListener('click', async ()=>{ try{ if(!signer || !relayer) throw new Error('Connect wallet first'); const address = validateAddress(addrInput.value); setLoading(btnCheck,true); setStatus('Encrypting & sending…'); resultEl.style.display='none'; const { handle, proof } = await encryptAddress(address); const publicHandle = await callCheckPublic(modeSel.value, handle, proof); const ok = await decryptPublic(publicHandle); showResult(ok); setStatus('✅ Done'); }catch(e){ console.error(e); setStatus('❌ '+e.message); } finally{ setLoading(btnCheck,false); } });
+    async function tryPublicDecrypt(handleHex){
+      const r = await initRelayer();
+      const bytes = hexToBytes(handleHex);
+      const variants = [
+        () => r.publicDecrypt({ handles: [bytes], types: ["bool"] }),
+        () => r.publicDecrypt({ handles: [handleHex], types: ["bool"] }),
+        () => r.publicDecrypt({ handle:  bytes, types: ["bool"] }),
+        () => r.publicDecrypt({ handle:  handleHex, types: ["bool"] }),
+        () => r.publicDecrypt([bytes]),
+        () => r.publicDecrypt([handleHex]),
+        () => r.publicDecrypt(bytes),
+        () => r.publicDecrypt(handleHex),
+      ];
+      let lastErr;
+      for (const [i,call] of variants.entries()){
+        try{
+          console.log(`[Decrypt:public] try v${i+1}`);
+          const resp = await call();
+          console.log(`[Decrypt:public] v${i+1} response`, resp);
+          const bool = extractBool(resp, handleHex);
+          console.log(`[Decrypt:public] v${i+1} parsed`, bool);
+          return bool;
+        }catch(e){ console.warn(`[Decrypt:public] v${i+1} failed`, e); lastErr = e; }
+      }
+      throw lastErr || new Error("publicDecrypt: all variants failed");
+    }
 
-      btnLast.addEventListener('click', async ()=>{ try{ if(!relayer) throw new Error('Relayer not ready'); if(!lastHandle) throw new Error('No handle cached yet'); setLoading(btnLast,true); setStatus('Decrypting last result…'); const ok = await decryptPublic(lastHandle); showResult(ok); setStatus('✅ Done'); }catch(e){ console.error(e); setStatus('❌ '+e.message); } finally{ setLoading(btnLast,false); } });
+    // экспортируем в window
+    window.initRelayer = initRelayer;
+    window.encrypt16For = encrypt16For;
+    window.tryUserDecrypt = tryUserDecrypt;
+    window.tryPublicDecrypt = tryPublicDecrypt;
+  })();
+  </script>
 
-      btnAddW.addEventListener('click', async ()=>{ try{ if(!contract) throw new Error('Connect first'); const address = validateAddress(adminHandle.value); setLoading(btnAddW,true); const { handle, proof } = await encryptAddress(address); clog.group('ADMIN addToWhitelist'); clog.table({ handle, proofLen: proof.length }); const tx = await contract.addToWhitelist(handle, proof, { gasLimit: 3_000_000 }); console.log('txHash', tx.hash); await tx.wait(); clog.end(); setStatus('✅ Added to whitelist (encrypted)'); }catch(e){ console.error(e); setStatus('❌ '+e.message); } finally{ setLoading(btnAddW,false); } });
+  <!-- APP -->
+  <script>
+  (function(){
+    const $ = (sel, root=document) => root.querySelector(sel);
+    const short = (a) => a ? (String(a).slice(0,6)+"…"+String(a).slice(-4)) : "—";
+    const setText = (sel, t) => { const el=$(sel); if(el) el.textContent=t; };
 
-      btnAddB.addEventListener('click', async ()=>{ try{ if(!contract) throw new Error('Connect first'); const address = validateAddress(adminHandle.value); setLoading(btnAddB,true); const { handle, proof } = await encryptAddress(address); clog.group('ADMIN addToBlacklist'); clog.table({ handle, proofLen: proof.length }); const tx = await contract.addToBlacklist(handle, proof, { gasLimit: 3_000_000 }); console.log('txHash', tx.hash); await tx.wait(); clog.end(); setStatus('✅ Added to blacklist (encrypted)'); }catch(e){ console.error(e); setStatus('❌ '+e.message); } finally{ setLoading(btnAddB,false); } });
+    const CONTRACT = CONFIG.CONTRACT_ADDRESS;
+    let provider=null, signer=null, address="", contract=null, N=0n;
 
-      refreshButtons();
-      if (window.ethereum?.on){ window.ethereum.on('chainChanged', ()=> window.location.reload()); window.ethereum.on('accountsChanged', ()=> window.location.reload()); }
-    </script>
-  </body>
+    const btnConnect = $("#connectBtn");
+    const rangeOut = $("#rangeOut");
+    const inpGuess = $("#guessInput");
+    const btnPlay  = $("#playBtn");
+    const statusEl = $("#status");
+    const txOut    = $("#txOut");
+    const resultBox= $("#resultBox");
+    const inpSeed  = $("#seedInput");
+    const btnReseed= $("#reseedBtn");
+
+    function status(msg){ if(statusEl){ statusEl.textContent = msg || ""; } console.log("[UI] status:", msg); }
+    function txmsg(msg){ if(txOut){ txOut.textContent = msg || ""; } console.log("[TX]", msg); }
+
+    async function ensureProvider(){
+      if (!window.ethereum) throw new Error("Install MetaMask");
+      if (!provider) provider = new window.ethers.BrowserProvider(window.ethereum);
+      return provider;
+    }
+
+    async function connect(){
+      const p = await ensureProvider();
+      const net = await p.getNetwork();
+      console.log("[Net] current", net);
+      const want = BigInt(CONFIG.CHAIN_ID_HEX);
+      if (net.chainId !== want){
+        console.log("[Net] switching to", CONFIG.CHAIN_ID_HEX);
+        await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: CONFIG.CHAIN_ID_HEX }] });
+      }
+      await p.send("eth_requestAccounts", []);
+      signer = await p.getSigner();
+      address = await signer.getAddress();
+      console.log("[Wallet] address", address);
+      btnConnect.textContent = short(address);
+      await onConnected();
+    }
+
+    async function onConnected(){
+      const p = await ensureProvider();
+      contract = new window.ethers.Contract(CONTRACT, window.CG_ABI, signer || p);
+      console.log("[Contract] bound", CONTRACT, contract);
+
+      try{
+        const nVal = await contract.N();
+        N = BigInt(nVal);
+        rangeOut.textContent = `0 … ${N.toString()}`;
+      }catch(e){ console.warn("[Contract] read N failed", e); rangeOut.textContent = "0 … —"; }
+
+      try { await window.initRelayer(); } catch(e){ console.warn("[Relayer] preload failed", e); }
+
+      btnPlay.disabled = false;
+      status("Wallet connected");
+    }
+
+    setText("#netBadge", "Network: " + (CONFIG.NETWORK_NAME || "—"));
+    setText("#ctrBadge", "Contract: " + short(CONTRACT));
+    btnPlay.disabled = true;
+
+    $("#connectBtn")?.addEventListener("click", () => connect().catch(e=>status(e.message||String(e))));
+
+    btnPlay?.addEventListener("click", async () => {
+      try{
+        if (!contract) await connect();
+        const vRaw = String(inpGuess.value||"0").trim();
+        if (vRaw === "") { status("Enter a number"); return; }
+        const v = BigInt(vRaw);
+        if (v < 0n) { status("Value must be ≥ 0"); return; }
+        if (N>0n && v>N) { status("Value must be in 0..N"); return; }
+
+        const { handle, attestation } = await window.encrypt16For(CONTRACT, address, v);
+        console.log("[Play] enc handle/proof", handle, attestation);
+
+        const tx = await contract.play(handle, attestation);
+        txmsg("TX sent: " + tx.hash);
+        const receipt = await tx.wait();
+        txmsg("Play done — block " + receipt.blockNumber);
+        console.log("[Play] receipt", receipt);
+
+        const iface = new ethers.Interface(window.CG_ABI);
+        const topic = iface.getEvent("Played").topicHash;
+        let resultHandle = null;
+        for (const log of receipt.logs) {
+          if (log.address?.toLowerCase() !== CONTRACT.toLowerCase()) continue;
+          if (!log.topics || log.topics[0] !== topic) continue;
+          try {
+            const parsed = iface.parseLog(log);
+            resultHandle = parsed?.args?.resultHandle;
+            console.log("[Event] Played parsed", parsed);
+            break;
+          } catch (e) { console.warn("[Event] parse fail", e, log); }
+        }
+        console.log("[Event] resultHandle", resultHandle);
+        if (!resultHandle) { resultBox.textContent = "Played, but result handle not found in logs."; return; }
+
+        try{
+          const isWinPrivate = await window.tryUserDecrypt(resultHandle, CONTRACT, address);
+          console.log("[Decrypt] user result", isWinPrivate);
+          resultBox.textContent = isWinPrivate ? "You WIN 🎉" : "Nope, try again.";
+        }catch(e1){
+          console.warn("[Decrypt] user failed, try public", e1);
+          try{
+            const isWinPublic = await window.tryPublicDecrypt(resultHandle);
+            console.log("[Decrypt] public result", isWinPublic);
+            resultBox.textContent = isWinPublic ? "You WIN 🎉" : "Nope, try again.";
+          }catch(e2){
+            console.error("[Decrypt] both failed", e2);
+            resultBox.textContent = "Played. Decrypt failed: " + (e2?.message || e1?.message || e2 || e1);
+          }
+        }
+      }catch(e){
+        console.error("[Play] error", e);
+        status("Play error: " + (e?.message||e));
+      }
+    });
+
+    btnReseed?.addEventListener("click", async () => {
+      try{
+        if (!contract) await connect();
+        const raw = String(inpSeed.value||"").trim();
+        if (!raw){ status("Enter seed"); return; }
+        const s = BigInt(raw);
+        if (s < 0n) { status("Seed must be ≥ 0"); return; }
+        if (N>0n && s>N){ status("Seed must be ≤ N"); return; }
+
+        const { handle, attestation } = await window.encrypt16For(CONTRACT, address, s);
+        console.log("[Reseed] enc handle/proof", handle, attestation);
+
+        const tx = await contract.reseed(handle, attestation);
+        txmsg("Reseed TX: " + tx.hash);
+        await tx.wait();
+        txmsg("Reseeded");
+      }catch(e){
+        console.error("[Reseed] error", e);
+        status("Reseed error: " + (e?.message||e));
+      }
+    });
+
+    (async () => {
+      try{
+        if (window.ethereum){
+          const p = new window.ethers.BrowserProvider(window.ethereum);
+          const accs = await p.send("eth_accounts", []);
+          console.log("[Auto] accounts", accs);
+          if (accs && accs[0]) {
+            signer = await p.getSigner();
+            address = await signer.getAddress();
+            console.log("[Auto] address", address);
+            $("#connectBtn").textContent = short(address);
+            await onConnected();
+          }
+        }
+      }catch(e){ console.warn("[Auto] failed", e); }
+    })();
+  })();
+  </script>
+</body>
 </html>
