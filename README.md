@@ -1,182 +1,227 @@
-# Private List Check (ZAMA FHEVM)
+# CipherGuess — a private guessing game on Zama FHEVM
 
-Privacy-preserving whitelist/blacklist membership check on Ethereum (Sepolia) using **Fully Homomorphic Encryption (FHE)** on Zama’s FHEVM.
+A tiny demo of a “guess the number” game built on Zama’s Fully Homomorphic EVM (FHEVM).
+The secret number lives **encrypted** on‑chain (`euint16`). The player submits an **encrypted** guess; the contract compares them privately and emits a handle to an encrypted boolean (`ebool`) that can be decrypted via the Relayer SDK.
 
-> **Goal:** let a user prove whether an address is **IN** or **OUT** of a confidential set **without revealing the address or the set**. Only an encrypted boolean is written on-chain; the UI publicly decrypts that boolean later. No raw addresses are ever logged to the console or sent to the chain.
-
----
-
-## ✨ Features
-
-* **Private membership check** for an input address (encrypted `eaddress`).
-* **Encrypted set** of members stored on-chain; comparison uses `FHE.eq` **only**.
-* **Public result**: contract marks the result `makePubliclyDecryptable`, so anyone can call `publicDecrypt(...)`.
-* **Admin helpers** to add addresses to **whitelist** or **blacklist** (the UI encrypts the raw address locally before calling the contract).
-* **No address leakage**: UI logs only handles, proofs, tx hashes, and decrypted booleans.
-* **Pure static frontend** (no bundler needed) powered by **Zama Relayer SDK**.
+> **TL;DR**
+>
+> * **Contract:** Solidity using `@fhevm/solidity` + `SepoliaConfig`
+> * **Frontend:** single `index.html` with Ethers (UMD) + Zama Relayer SDK (CDN)
+> * **Decryption:** try **private** (`userDecrypt`) first; if it fails, fall back to **public** (`publicDecrypt`)
 
 ---
 
-## 🔧 Tech Stack
-
-* **Solidity** (Zama FHEVM):
-
-  * `import { FHE, ebool, eaddress, externalEaddress } from "@fhevm/solidity/lib/FHE.sol"`
-  * Access control with `FHE.allow/allowThis` and **public decrypt** via `FHE.makePubliclyDecryptable`.
-* **Frontend**: Vanilla HTML/JS + **Zama Relayer SDK** (official)
-
-  * `createInstance`, `createEncryptedInput`, `publicDecrypt`.
-  * Ethers v6 for wallet & contract calls.
-
-> Documentation: Zama Relayer SDK — [https://docs.zama.ai/protocol/relayer-sdk-guides/](https://docs.zama.ai/protocol/relayer-sdk-guides/)
-
----
-
-## 🏗️ How it works
-
-1. The UI takes an input **address** and encrypts it in the browser via the Relayer SDK, producing a **ciphertext handle** + **proof**.
-2. The contract iterates through its encrypted set (whitelist or blacklist) and uses **`FHE.eq`** to compare with the input `eaddress`.
-3. The contract emits an event with a **result handle** (encrypted boolean) and flags it as **publicly decryptable**.
-4. The UI invokes **`publicDecrypt`** on that handle to display **IN** or **OUT**.
-
-**Security notes**
-
-* Only the encrypted boolean is ever published. Raw addresses and the set members remain encrypted.
-* Console logging is trimmed to exclude raw addresses.
-
----
-
-## 🧱 Contract
-
-* **Network**: Sepolia (chainId `11155111`)
-* **Address**: `0x8Ac1d3E49A73F8328e43719dCF6fBfeF4405937B`
-* **KMS (Sepolia)**: `0x1364cBBf2cDF5032C47d8226a6f6FBD2AFCDacAC`
-* **Key methods (public result)**:
-
-  * `checkWhitelistPublic(bytes32 addrExt, bytes proof) → bytes32`
-  * `checkBlacklistPublic(bytes32 addrExt, bytes proof) → bytes32`
-  * `getLastResultHandle() → bytes32`
-* **Admin methods (UI encrypts the input address before calling):**
-
-  * `addToWhitelist(bytes32 addrExt, bytes proof)`
-  * `addToBlacklist(bytes32 addrExt, bytes proof)`
-* **Event:** `MembershipChecked(address user, bool isWhitelist, uint256 scannedCount, bytes32 resultHandle)`
-
-> Implementation follows Zama guidance: only `FHE.eq` over `eaddress`, **no** arithmetic on `eaddress`.
-
----
-
-## 📁 Repository Layout
+## Architecture
 
 ```
-frontend/
-  public/
-    index.html        # Standalone UI (no build step)
-contracts/
-  PrivateListCheck.sol
-scripts/              # optional
-hardhat.config.ts     # if you use Hardhat for local tasks
+Wallet (EIP-712)
+     │
+     ▼
+Relayer SDK (browser) ──► Zama Relayer (testnet)
+     │                        │
+     │ encrypt input          │ inputProof / attestation
+     └──────────────┬─────────┘
+                    ▼
+             CipherGuess.sol  (FHEVM on Sepolia)
+                    │
+            FHE.eq(secret, guess)   // all encrypted
+                    │
+                    ▼
+        handle(ebool) → Played event
+                    │
+         ┌──────────┴───────────┐
+         ▼                      ▼
+  userDecrypt (private)   publicDecrypt (fallback)
 ```
 
 ---
 
-## 🚀 Quick Start (Frontend)
+## Stack
 
-**Prerequisites:** MetaMask, Node.js (optional for serving static files).
+* **Solidity (0.8.25)** + Zama FHEVM:
 
-### Option A — open as a static file
+  * `@fhevm/solidity/lib/FHE.sol` (types `euint16`, `ebool`; API `FHE.*`)
+  * `@fhevm/solidity/config/ZamaConfig.sol` (`SepoliaConfig`)
+* **Frontend**:
 
-* Open `frontend/public/index.html` directly in a modern browser.
-* If your browser blocks crypto features from file://, use Option B below.
+  * Ethers v6 (UMD via CDN)
+  * Zama Relayer SDK JS `0.2.0` (CDN)
+  * Plain static HTML/JS (no bundler)
 
-### Option B — serve locally
+---
+
+## Repository layout
+
+```
+.
+├─ contracts/
+│  └─ CipherGuess.sol         # smart contract
+├─ web/
+│  └─ index.html              # single‑file frontend
+└─ README.md
+```
+
+---
+
+## Smart contract
+
+Key points:
+
+* The secret is stored as `euint16 _secret`.
+* Reseed (`reseed`) accepts an **encrypted** value via `FHE.fromExternal(externalEuint16, proof)`.
+* The player submits an **encrypted** guess; the contract computes `FHE.eq` privately.
+* ACL:
+
+  * `FHE.allowTransient(win, msg.sender)` — one‑shot private decryption right for the current player.
+  * `FHE.makePubliclyDecryptable(win)` — optional **public fallback** (handy for demos).
+* Helper `reseedPlain` is for diagnostics only — **remove for production**.
+
+> The contract does **not** do on‑chain range validation for encrypted values (to avoid forcing public decryption). The range is enforced on the frontend.
+
+---
+
+## Frontend
+
+Single `index.html` that:
+
+* Loads Ethers UMD and Relayer SDK from CDN.
+* Initializes the SDK with `initSDK()` and `createInstance(SepoliaConfig)`.
+* Creates encrypted input with `createEncryptedInput(...).add16(value).encrypt()` → returns `handle` and `inputProof`.
+* Calls `play(handle, proof)` and reads the `resultHandle` from the `Played` event.
+* Decrypts the result:
+
+  * tries **private** `userDecrypt(...)` first (EIP‑712 signature; requires KMS/ACL to permit the caller),
+  * if it fails (e.g., key not provisioned), uses **public** `publicDecrypt(...)` as a fallback.
+
+The page contains extensive `console.log` statements for encryption, transactions, event parsing, and decryption.
+
+---
+
+## Deploying the contract
+
+Use any Ethereum toolchain (Hardhat or Foundry). Example with **Foundry**:
 
 ```bash
-# from repo root
-npx serve frontend/public -p 5173    # or any static server
-# then open http://localhost:5173
+# 1) init project
+forge init cipherguess && cd cipherguess
+forge install zama-ai/fhevm-solidity
+
+# 2) put contracts/CipherGuess.sol into your project
+
+# 3) build
+forge build
+
+# 4) deploy (example to Sepolia)
+forge create --rpc-url $SEPOLIA_RPC \
+  --private-key $PK \
+  contracts/CipherGuess.sol:CipherGuess \
+  --constructor-args 100
 ```
 
-Alternatives:
+Save the deployed address for the frontend.
+
+---
+
+## Running the frontend locally
+
+`web/index.html` is a static file. Serve it with any static server, e.g.:
 
 ```bash
-# python
-python3 -m http.server --directory frontend/public 5173
-# or
-npx http-server frontend/public -p 5173 --cors
+# Python
+cd web
+python3 -m http.server 8080
+
+# or Node serve
+npx serve -p 8080 web
 ```
 
-### Using the dApp
-
-1. Click **Connect MetaMask** (network auto-switches to **Sepolia** if needed).
-2. Choose **Whitelist** or **Blacklist** and paste an address to check (0x…).
-3. Press **Check** → the app encrypts & sends, then shows **IN** or **OUT**.
-4. You can later press **Decrypt Last Result** to re-decrypt the last emitted handle.
-
-### Admin (optional)
-
-* As the contract owner, paste an address into the **Admin** panel and use:
-
-  * **Add to Whitelist** or **Add to Blacklist** — the UI encrypts the address, then calls the contract.
+Open `http://localhost:8080` and connect MetaMask to **Sepolia**.
 
 ---
 
-## 🧩 Installation (full project)
+## Configuration
 
-```bash
-# 1) Clone
-git clone https://github.com/<your-org>/<your-repo>.git
-cd <your-repo>
+Edit this block in `web/index.html`:
 
-# 2) (optional) Install deps if you plan to compile/deploy contracts
-npm i
-
-# 3) Frontend — run a static server
-npx serve frontend/public -p 5173
+```js
+window.CONFIG = {
+  NETWORK_NAME: "Sepolia",
+  CHAIN_ID_HEX: "0xaa36a7",              // 11155111
+  CONTRACT_ADDRESS: "0x...your_deployed_address..."
+};
 ```
 
-**Download as ZIP:**
-If this repo is on GitHub, you can download directly:
-
-```
-https://github.com/<your-org>/<your-repo>/archive/refs/heads/main.zip
-```
-
-> Replace `<your-org>/<your-repo>` with your namespace.
+The Relayer SDK is loaded from `https://cdn.zama.ai/relayer-sdk-js/0.2.0/relayer-sdk-js.js` and uses `SepoliaConfig` with the test relayer and gateway URLs.
 
 ---
 
-## 🔗 Relayer/Gateway (Testnet)
+## How to play
 
-* **Relayer URL**: `https://relayer.testnet.zama.cloud`
-* **Chain**: Sepolia `11155111`
-* **KMS**: `0x1364cBBf2cDF5032C47d8226a6f6FBD2AFCDacAC`
+1. Connect your wallet.
+2. (Optional, owner only) Enter a seed and press **Reseed (encrypted)**.
+3. Enter your guess within the range and press **Play**.
+4. Wait for the tx to confirm and the result to decrypt:
 
----
-
-## 🧪 Console Logging
-
-The console prints only:
-
-* encryption **handle** and **proof** length (never raw addresses),
-* transaction hash and receipt summary,
-* the decrypted boolean value.
-
-To disable logging entirely, search for the small `clog` helper in `index.html` and no-op the calls.
+   * **You WIN 🎉** — the guess equals the secret,
+   * **Nope, try again.** — the guess is different.
 
 ---
 
-## ❗ Troubleshooting
+## Privacy model & ACL
 
-* **“Handle … is not allowed for public decryption”**
-  You likely called a non-public method. Use `checkWhitelistPublic` / `checkBlacklistPublic` from the UI.
-* **Invalid address**
-  The UI requires EIP-55 compatible `0x` address (40 hex chars). It validates before sending.
-* **Wrong network**
-  MetaMask must be on **Sepolia**. The app will try to switch automatically.
+* The secret and the guess are **always encrypted** on‑chain.
+* The equality check is performed by the contract over ciphertexts: `FHE.eq`.
+* The result is an `ebool` turned into an opaque **handle** (not a plaintext value).
+* Decryption rights:
+
+  * **Private:** `FHE.allowTransient(win, msg.sender)` → `userDecrypt` for the caller.
+  * **Public fallback:** `FHE.makePubliclyDecryptable(win)` → `publicDecrypt` for anyone.
+
+> For strict privacy, **remove** `FHE.makePubliclyDecryptable(win)` and only keep `userDecrypt` on the frontend. Ensure the caller’s KMS key is correctly provisioned in the network.
 
 ---
 
-## ✅ License
+## Troubleshooting
 
-MIT — feel free to use and adapt.
+### “Invalid public or private key”
+
+* The account’s KMS key is not provisioned or mismatched for the network.
+
+  * Ensure you’ve run `createEncryptedInput(...).encrypt()` at least once with this address.
+  * Retry `userDecrypt` from the **same** address that called `play()`.
+  * Use the public fallback `publicDecrypt` for demos.
+
+### “Contract address is not a valid address” (during encryption)
+
+* Some SDK builds error on the object form `createEncryptedInput({ ... })`. The frontend already falls back to the positional API `createEncryptedInput(contractAddress, userAddress)`.
+
+### “\_.map is not a function” (during publicDecrypt)
+
+* That SDK build expects byte arrays. The frontend converts handles to `Uint8Array(32)` before decrypting.
+
+### “Played, but result handle not found in logs.”
+
+* Check the ABI of `Played` on the frontend and the contract address.
+* Verify the tx really targeted your contract (`receipt.to`).
+
+---
+
+## Production notes
+
+* Remove/disable `reseedPlain` — it reveals the secret value.
+* For strictly private UX, **do not** call `makePubliclyDecryptable` and remove `publicDecrypt` from the UI.
+* Never branch (`require`) on encrypted `ebool` — that would leak information.
+* Validate user input **on the frontend**; on‑chain range checks for encrypted values require extra logic and/or public decryption.
+* Pin SDK & contract versions; mismatches can break decryption.
+
+---
+
+## License
+
+MIT — for demonstration purposes only. Use at your own risk.
+
+---
+
+## Acknowledgments
+
+Thanks to the Zama team for FHEVM and the Relayer SDK. See the official docs at **docs.zama.ai** (Protocol → Relayer SDK Guides).
