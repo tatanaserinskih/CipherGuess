@@ -3,12 +3,6 @@
 A tiny demo of a “guess the number” game built on Zama’s Fully Homomorphic EVM (FHEVM).
 The secret number lives **encrypted** on‑chain (`euint16`). The player submits an **encrypted** guess; the contract compares them privately and emits a handle to an encrypted boolean (`ebool`) that can be decrypted via the Relayer SDK.
 
-> **TL;DR**
->
-> * **Contract:** Solidity using `@fhevm/solidity` + `SepoliaConfig`
-> * **Frontend:** single `index.html` with Ethers (UMD) + Zama Relayer SDK (CDN)
-> * **Decryption:** try **private** (`userDecrypt`) first; if it fails, fall back to **public** (`publicDecrypt`)
-
 ---
 
 ## Architecture
